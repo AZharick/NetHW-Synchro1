@@ -5,15 +5,15 @@ public class Main {
    public static int stringNumber = 1;
    public static final String ALT = "\u001b[34;1m";
    public static final String RESET = "\u001B[0m";
-   public static final String ALT2 = "\u001b[34m";
+   private static int keyOfMax = 0;
 
    public static void main(String[] args) throws InterruptedException {
 
-      Runnable logic = () -> {
+      Runnable pathGenerator_RCounter = () -> {
          String route = generateRoute("RLRFR", 100);
          System.out.println(ALT + stringNumber + ": " + RESET + route);
          int r = countR(route);
-         System.out.println(ALT2 + "Кол-во R: " + RESET + r);
+         System.out.println(ALT + "Кол-во R: " + RESET + r);
 
          synchronized (sizeToFreq) {
             if (sizeToFreq.containsKey(r)) {
@@ -21,16 +21,44 @@ public class Main {
             } else {
                sizeToFreq.put(r, 1);
             }
+            sizeToFreq.notify();
          }
          stringNumber++;
       };
 
-      for (int i = 0; i < 1000; i++) {
-         Thread thread = new Thread(logic);
-         thread.start();
-         thread.join();
-      }
+      Runnable mapMaxSeeker = () -> {
+         while (!Thread.interrupted()) {
+            int maxValue = 0;
+            synchronized (sizeToFreq) {
 
+               try {
+                  sizeToFreq.wait();
+               } catch (InterruptedException e) {
+                  throw new RuntimeException(e);
+               }
+               Iterator<Map.Entry<Integer, Integer>> iterator = sizeToFreq.entrySet().iterator();
+               while (iterator.hasNext()) {
+                  Map.Entry<Integer, Integer> entry = iterator.next();
+                  if (entry.getValue() > maxValue) {
+                     maxValue = entry.getValue();
+                     keyOfMax = entry.getKey();
+                  }
+               }
+
+            }
+            System.out.printf("\n" + ALT + "Самое частое количество повторений: "
+                    + RESET + "%d (встретилось %d раз)\n", keyOfMax, maxValue);
+         }
+      };
+
+      Thread mapMax = new Thread(mapMaxSeeker);
+      mapMax.start();
+      for (int i = 0; i < 1000; i++) {
+         Thread path = new Thread(pathGenerator_RCounter);
+         path.start();
+         path.join();
+      }
+      mapMax.interrupt();
       displayMapResult(sizeToFreq);
    }
 
@@ -54,20 +82,7 @@ public class Main {
    }
 
    public static void displayMapResult(HashMap map) {
-      //computing max value
-      int maxValue = 0;
-      int keyOfMax = 0;
-      Iterator<Map.Entry<Integer, Integer>> iterator = map.entrySet().iterator();
-      while (iterator.hasNext()) {
-         Map.Entry<Integer, Integer> entry = iterator.next();
-         if (entry.getValue() > maxValue) {
-            maxValue = entry.getValue();
-            keyOfMax = entry.getKey();
-         }
-      }
-      System.out.printf("\nСамое частое количество повторений - %d (встретилось %d раз)\n", keyOfMax, maxValue);
       System.out.println("Другие размеры:");
-
       Iterator<Map.Entry<Integer, Integer>> iterator2 = map.entrySet().iterator();
       while (iterator2.hasNext()) {
          Map.Entry<Integer, Integer> entry = iterator2.next();
