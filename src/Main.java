@@ -1,19 +1,18 @@
+//доработка v.1
 import java.util.*;
 
 public class Main {
    public static final HashMap<Integer, Integer> sizeToFreq = new HashMap<>();
-   public static int stringNumber = 1;
    public static final String ALT = "\u001b[34;1m";
    public static final String RESET = "\u001B[0m";
-   public static final String ALT2 = "\u001b[34m";
 
    public static void main(String[] args) throws InterruptedException {
 
       Runnable logic = () -> {
          String route = generateRoute("RLRFR", 100);
-         System.out.println(ALT + stringNumber + ": " + RESET + route);
+         System.out.println(route);
          int r = countR(route);
-         System.out.println(ALT2 + "Кол-во R: " + RESET + r);
+         System.out.println(ALT + "Кол-во R: " + RESET + r);
 
          synchronized (sizeToFreq) {
             if (sizeToFreq.containsKey(r)) {
@@ -22,15 +21,19 @@ public class Main {
                sizeToFreq.put(r, 1);
             }
          }
-         stringNumber++;
       };
 
+      List<Thread> threads = new ArrayList<>();
       for (int i = 0; i < 1000; i++) {
          Thread thread = new Thread(logic);
+         threads.add(thread);
+      }
+      for (Thread thread : threads) {
          thread.start();
+      }
+      for (Thread thread : threads) {
          thread.join();
       }
-
       displayMapResult(sizeToFreq);
    }
 
