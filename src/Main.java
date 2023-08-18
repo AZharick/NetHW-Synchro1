@@ -1,8 +1,8 @@
+//доработка v.1
 import java.util.*;
 
 public class Main {
    public static final HashMap<Integer, Integer> sizeToFreq = new HashMap<>();
-   public static int stringNumber = 1;
    public static final String ALT = "\u001b[34;1m";
    public static final String RESET = "\u001B[0m";
    private static int keyOfMax = 0;
@@ -11,7 +11,7 @@ public class Main {
 
       Runnable pathGenerator_RCounter = () -> {
          String route = generateRoute("RLRFR", 100);
-         System.out.println(ALT + stringNumber + ": " + RESET + route);
+         System.out.println(route);
          int r = countR(route);
          System.out.println(ALT + "Кол-во R: " + RESET + r);
 
@@ -23,16 +23,14 @@ public class Main {
             }
             sizeToFreq.notify();
          }
-         stringNumber++;
       };
 
       Runnable mapMaxSeeker = () -> {
          while (!Thread.interrupted()) {
             int maxValue = 0;
             synchronized (sizeToFreq) {
-
                try {
-                  sizeToFreq.wait();
+                  sizeToFreq.wait();     // InterruptedException here sometimes
                } catch (InterruptedException e) {
                   throw new RuntimeException(e);
                }
@@ -53,11 +51,19 @@ public class Main {
 
       Thread mapMax = new Thread(mapMaxSeeker);
       mapMax.start();
+
+      List<Thread> pathThreads = new ArrayList<>();
       for (int i = 0; i < 1000; i++) {
          Thread path = new Thread(pathGenerator_RCounter);
+         pathThreads.add(path);
+      }
+      for (Thread path : pathThreads) {
          path.start();
+      }
+      for (Thread path : pathThreads) {
          path.join();
       }
+
       mapMax.interrupt();
       displayMapResult(sizeToFreq);
    }
@@ -87,7 +93,7 @@ public class Main {
       while (iterator2.hasNext()) {
          Map.Entry<Integer, Integer> entry = iterator2.next();
          if (entry.getKey() == keyOfMax) {
-            iterator2.next();
+            iterator2.next();   //NoSuchElementException here seldom
          } else {
             System.out.printf("- %d (%d раз)\n", entry.getKey(), entry.getValue());
          }
